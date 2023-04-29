@@ -28,7 +28,7 @@ export class Engine {
         this.context = canvas.getContext("2d");
         //this.context.scale(1, -1);
         this.context.translate(this.canvas.width / 2, this.canvas.height / 2);
-        // this.context.imageSmoothingEnabled = false;
+        this.context.imageSmoothingEnabled = false;
         //this.context.imageSmoothingQuality = "low";
 
         /**
@@ -44,6 +44,15 @@ export class Engine {
          * @type {Map<string, HTMLImageElement>}
         */
         this.images = new Map();
+
+        this.keysDown = new Set();
+        document.addEventListener("keydown", ev => {
+            this.keysDown.add(event.code);
+        });
+
+        document.addEventListener("keyup", ev => {
+            this.keysDown.delete(event.code);
+        });
 
         /**
          * The game instance.
@@ -133,7 +142,7 @@ export class Engine {
     animate(currentTime) {
         const timeElapsed = (currentTime - this.lastFrameTime) / 1000.0;
         this.lastFrameTime = currentTime;
-        this.game.animate(this, timeElapsed);
+        this.game.animate(timeElapsed);
         const self = this;
         window.requestAnimationFrame((ct) => self.animate(ct));
     }

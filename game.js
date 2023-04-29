@@ -7,6 +7,7 @@ export class Game {
      * @param {Engine} engine - The engine on which this game will run.
      */
     constructor(engine) {
+        this.engine = engine;
     }
     /**
      * Animates the game.
@@ -14,6 +15,6 @@ export class Game {
      * @param {number} timeElapsed - The amount of time elapsed since the last frame.
      * @returns {void}
      */
-    animate(engine, timeElapsed) {
+    animate(timeElapsed) {
     }
 }

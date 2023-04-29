@@ -19,6 +19,7 @@ export class Sprite {
             width: null,
             height: null
         };
+        this.visible = true;
         this.scale = new Vec(1.0, 1.0);
         this.center = new Vec(null, null);
         const self = this;
@@ -76,7 +77,7 @@ export class Sprite {
      * @throws {Error} If the angle parameter is not a number.
      */
     stamp(context, pos, angle, scale) {
-        if (this.image.complete) {
+        if (this.image.complete && this.visible) {
             var scale = scale ? new Vec(this.scale.x * scale.x, this.scale.y * scale.y) : this.scale;
             context.save();
             context.translate(pos.x, pos.y);

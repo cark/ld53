@@ -58,6 +58,10 @@ export class Vec {
         return new Vec(this.x * invLength, this.y * invLength);
     }
 
+    scale(otherVec) {
+        return new Vec(this.x * otherVec.x, this.y * otherVec.y);
+    }
+
     /**
      * A Vec representing a zero vector.
      * @static
