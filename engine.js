@@ -1,4 +1,7 @@
 import { Game } from "./game.js"
+import { Sprite } from "./sprite.js"
+import { AnimatedSprite } from "./animatedsprite.js"
+import { SpriteSheet } from "./spritesheet.js"
 
 /**
  * The Engine class manages the rendering loop and provides a context to draw on a canvas.
@@ -9,9 +12,9 @@ export class Engine {
      * Creates an instance of Engine.
      * @constructor
      * @param {HTMLCanvasElement} canvas - The canvas element to render on.
-     * @param {Game} game - The game instance.
+     * @param {typeof Game} gameClass - The class that defines the game logic.
      */
-    constructor(canvas, game) {
+    constructor(canvas, gameClass) {
         /**
          * The canvas element.
          * @type {HTMLCanvasElement}
@@ -23,6 +26,10 @@ export class Engine {
          * @type {CanvasRenderingContext2D}
          */
         this.context = canvas.getContext("2d");
+        //this.context.scale(1, -1);
+        this.context.translate(this.canvas.width / 2, this.canvas.height / 2);
+        // this.context.imageSmoothingEnabled = false;
+        //this.context.imageSmoothingQuality = "low";
 
         /**
          * The time of the last frame.
@@ -31,17 +38,18 @@ export class Engine {
          */
         this.lastFrameTime = performance.now();
 
-        /**
-         * The game instance.
-         * @type {Game}
-         */
-        this.game = game;
 
         /**
          * A map of loaded images for the Engine.
          * @type {Map<string, HTMLImageElement>}
-         */
+        */
         this.images = new Map();
+
+        /**
+         * The game instance.
+         * @type {Game}
+         */
+        this.game = new gameClass(this);
 
         this.animate(this.lastFrameTime);
     }
@@ -80,14 +88,42 @@ export class Engine {
         }
     }
 
-    _ensureImage(imageOrUrl) {
-        let image;
+    /**
+     * Ensures that the given image is loaded and returns it. If an URL is passed,
+     * the method will first load the image before returning it.
+     *
+     * @param {string|HTMLImageElement} imageOrUrl - Either an URL or an already
+     * loaded `HTMLImageElement`.
+     *
+     * @returns {HTMLImageElement} The loaded `HTMLImageElement`.
+     */
+    ensureImage(imageOrUrl) {
         if (imageOrUrl instanceof Image) {
-            image = imageOrUrl;
+            return imageOrUrl;
         } else {
-            image = this.image(imageOrUrl);
+            return this.image(imageOrUrl);
         }
-        return image;
+    }
+
+    /**
+     * Creates and returns a new sprite instance from the given image. If an URL
+     * is passed, the method will first load the image before creating the sprite.
+     *
+     * @param {string|HTMLImageElement} imageOrUrl - Either an URL or an already
+     * loaded `HTMLImageElement`.
+     *
+     * @returns {Sprite} The new `Sprite` instance.
+     */
+    sprite(imageOrUrl) {
+        return new Sprite(this.ensureImage(imageOrUrl));
+    }
+
+    animatedSprite(spriteSheet, firstFrameId, frameDuration) {
+        return new AnimatedSprite(spriteSheet, firstFrameId, frameDuration);
+    }
+
+    spriteSheet(imageOrUrl, parser) {
+        return new SpriteSheet(this.ensureImage(imageOrUrl), parser);
     }
 
     /**
@@ -100,5 +136,11 @@ export class Engine {
         this.game.animate(this, timeElapsed);
         const self = this;
         window.requestAnimationFrame((ct) => self.animate(ct));
+    }
+
+    stamp(sprite, pos, angle) {
+        if (sprite == null) throw new Error("Missing sprite parameter");
+        // if (!(sprite instanceof Sprite || sprite instanceof AnimatedSprite)) throw new Error("sprite must be a Sprite or an AnimatedSprite.");
+        sprite.stamp(this.context, pos, angle);
     }
 }

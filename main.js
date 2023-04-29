@@ -30,5 +30,5 @@ import { Ld53 } from "./ld53.js"
 
 window.onload = () => {
   const canvas = document.getElementById("canvas");
-  const engine = new Engine(canvas, new Ld53());
+  const engine = new Engine(canvas, Ld53);
 };

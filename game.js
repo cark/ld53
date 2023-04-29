@@ -4,8 +4,9 @@
 export class Game {
     /**
      * Constructs a new Game instance.
+     * @param {Engine} engine - The engine on which this game will run.
      */
-    constructor() {
+    constructor(engine) {
     }
     /**
      * Animates the game.
