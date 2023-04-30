@@ -45,6 +45,10 @@ export class Timer {
         return this.time - this.duration;
     }
 
+    percentDone() {
+        return this.time / this.duration;
+    }
+
     /**
      * Reset the timer with a new duration and start time.
      * @param {number} [duration] - The new duration in seconds. If not provided, the current duration is used.

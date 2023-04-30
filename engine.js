@@ -149,7 +149,7 @@ export class Engine {
 
     stamp(sprite, pos, angle) {
         if (sprite == null) throw new Error("Missing sprite parameter");
-        // if (!(sprite instanceof Sprite || sprite instanceof AnimatedSprite)) throw new Error("sprite must be a Sprite or an AnimatedSprite.");
+        if (!(sprite instanceof Sprite || sprite instanceof AnimatedSprite)) throw new Error("sprite must be a Sprite or an AnimatedSprite.");
         sprite.stamp(this.context, pos, angle);
     }
 }

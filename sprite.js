@@ -22,6 +22,7 @@ export class Sprite {
         this.visible = true;
         this.scale = new Vec(1.0, 1.0);
         this.center = new Vec(null, null);
+        this.alpha = 1.0;
         const self = this;
         function fixSizes() {
             if (self.imageRect.width == null) {
@@ -31,6 +32,7 @@ export class Sprite {
                 self.imageRect.height = image.height;
             }
             if (self.center.x == null) {
+                //console.log("fixed");
                 self.center.x = image.width / 2;
             }
             if (self.center.y == null) {
@@ -76,10 +78,13 @@ export class Sprite {
      * @param {Vec} [scale] - The scale factor to apply to the sprite, as a Vec instance.
      * @throws {Error} If the angle parameter is not a number.
      */
-    stamp(context, pos, angle, scale) {
+    stamp(context, pos, angle, scale, alpha) {
         if (this.image.complete && this.visible) {
             var scale = scale ? new Vec(this.scale.x * scale.x, this.scale.y * scale.y) : this.scale;
+            var angle = angle ? angle : 0;
+            var alpha = alpha ? this.alpha * alpha : this.alpha;
             context.save();
+            context.globalAlpha = alpha;
             context.translate(pos.x, pos.y);
             context.rotate(angle * Math.PI / 180);
             context.scale(scale.x, scale.y);

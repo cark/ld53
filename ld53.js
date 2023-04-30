@@ -4,7 +4,7 @@ import { Vec } from "./vec.js"
 import { AnimatedSprite } from './animatedsprite.js'
 import { kennyParser } from "./spritesheet.js"
 import { PizzaMan } from "./pizzaman.js"
-
+import { Levels } from "./levels.js"
 
 /**
  * Represents the Ld53 game.
@@ -17,26 +17,9 @@ export class Ld53 extends Game {
      */
     constructor(engine) {
         super(engine);
-        this.pizzaMan = new PizzaMan(this);
-        // this.ship = engine.sprite("ship.png");
-        // this.pizzaman = engine.sprite("pizzaman.png");
-        // this.pizzaman.scale.x = 2;
-        // this.pizzaman.scale.y = 2;
-        // this.pizzaman.center.x = 16;
-        // this.pizzaman.center.y = 16;
-        // this.ship.scale.x = 0.2;
-        // this.ship.scale.y = 0.2;
-        // const adventurerSheet = engine.spriteSheet("character_femaleAdventurer_sheet.png", kennyParser("character_femaleAdventurer_sheet.xml"));
-        // this.adventurer = engine.animatedSprite(adventurerSheet, "walk0", 0.1)
-        //     .addFrame("walk1")
-        //     .addFrame("walk2")
-        //     .addFrame("walk3")
-        //     .addFrame("walk4")
-        //     .addFrame("walk5")
-        //     .addFrame("walk6")
-        //     .addFrame("walk7")
-        //     .setRepeat(true);
-        // this.adventurer.scale = new Vec(1.0, 1.0);
+        this.levels = new Levels(this);
+        this.state = new GameStateLevel(this, "Level_1");
+        // this.state = new GameStateTitle(this);
     }
 
     /**
@@ -47,14 +30,55 @@ export class Ld53 extends Game {
      */
     animate(timeElapsed) {
         this.engine.clear("#444");
-        this.pizzaMan.update(timeElapsed);
-        this.pizzaMan.draw();
-        // this.engine.stamp(this.pizzaman, new Vec(0, 0), 0);
-        // engine.context.fillStyle = "red";  // set fill color
-        // engine.context.fillRect(0, 0, 10, 10);
-        // engine.stamp(this.ship, new Vec(0, 0), 0);
-        // this.adventurer.update(timeElapsed);
-        // engine.stamp(this.adventurer, new Vec(0, 0), 0);
-        // console.log(this.ship.center);
+        this.state.update(timeElapsed);
+        this.state.draw();
+    }
+}
+
+class GameStateLevel {
+    constructor(game, levelName) {
+        this.game = game;
+        this.levelName = levelName
+    }
+    update(timeElapsed) {
+        let level = this.game.levels.levels.get(this.levelName);
+        if (level) {
+            level.update(timeElapsed);
+        }
+    }
+    draw() {
+        let level = this.game.levels.levels.get(this.levelName);
+        if (level) {
+            level.draw();
+        }
+    }
+}
+
+class GameStateTitle {
+    constructor(game) {
+        this.game = game;
+        this.sprite = game.engine.sprite("title.png");
+        this.sprite.scale.x = 3.0;
+        this.sprite.scale.y = 3.0;
+        this.registerEvents();
+    }
+
+    registerEvents() {
+        const self = this;
+        function handleEvent() {
+            console.log("event");
+            self.game.state = new GameStateLevel(self.game, "Level_1");
+            document.removeEventListener("keypress", handleEvent);
+            self.game.engine.canvas.removeEventListener("click", handleEvent);
+        }
+        document.addEventListener("keypress", handleEvent);
+        this.game.engine.canvas.addEventListener("click", handleEvent);
+    }
+
+    update(timeElapsed) {
+    }
+
+    draw() {
+        this.game.engine.stamp(this.sprite, new Vec(0, 0), 0);
     }
 }

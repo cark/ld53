@@ -16,6 +16,7 @@ export class AnimatedSprite {
         this.timer = new Timer(frameDuration);
         this.currIndex = 0;
         this.repeat = false;
+        this.alpha = 1.0;
     }
 
     addFrame(id, duration) {
@@ -68,7 +69,7 @@ export class AnimatedSprite {
                 frame.sprite = sprite;
             }
             if (!sprite) throw new Error(`Invalid sprite name: ${frame.name}`);
-            sprite.stamp(context, pos, angle, this.scale);
+            sprite.stamp(context, pos, angle, this.scale, this.alpha);
         }
     }
 

@@ -12,6 +12,10 @@ export class Util {
     static oneOf(values) {
         return values[Math.trunc(Math.random() * values.length)];
     }
+
+    static lerp(t, start, end) {
+        return start + t * (end - start);
+    }
 }
 
 export function assert(value) {

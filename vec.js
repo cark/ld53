@@ -1,3 +1,5 @@
+import { Util } from "./util";
+
 /**
  * A class representing a two-dimensional vector.
  * @class
@@ -60,6 +62,10 @@ export class Vec {
 
     scale(otherVec) {
         return new Vec(this.x * otherVec.x, this.y * otherVec.y);
+    }
+
+    lerp(t, toVec) {
+        return new Vec(Util.lerp(t, this.x, toVec.x), Util.lerp(t, this.y, toVec.y));
     }
 
     /**
