@@ -1,4 +1,4 @@
-import { Util } from "./util";
+// import { Util } from "./util";
 
 /**
  * A class representing a two-dimensional vector.
@@ -65,7 +65,11 @@ export class Vec {
     }
 
     lerp(t, toVec) {
-        return new Vec(Util.lerp(t, this.x, toVec.x), Util.lerp(t, this.y, toVec.y));
+        return new Vec(lerp(t, this.x, toVec.x), lerp(t, this.y, toVec.y));
+    }
+
+    equals(toVec) {
+        return this.x == toVec.x && this.y == toVec.y;
     }
 
     /**
@@ -102,4 +106,8 @@ export class Vec {
      * @type {Vec}
      */
     static LEFT = new Vec(-1.0, 0.0);
+}
+
+function lerp(t, start, end) {
+    return start + t * (end - start);
 }

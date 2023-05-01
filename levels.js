@@ -3,8 +3,10 @@ import { Game } from "./game.js";
 import { Engine } from "./engine.js";
 import { Vec } from "./vec.js";
 import { PizzaMan } from "./pizzaman.js";
-import { Constants as C } from "./constants.js";
+import { Constants as C } from "./util.js";
 import { Queue } from "./queue";
+import { Steam } from "./steam";
+import { Timer } from "./timer";
 
 // const scale = new Vec(4, 4);
 // const cellSize = new Vec(16, 16);
@@ -30,18 +32,6 @@ export class Levels {
                 console.error(error);
             });
     }
-    // update(timeElapsed) {
-    //     const level = this.levels.get(this.game.currentLevelName);
-    //     if (level) {
-    //         level.update(timeElapsed);
-    //     }
-    // }
-    // draw() {
-    //     const level = this.levels.get(this.game.currentLevelName);
-    //     if (level) {
-    //         level.draw();
-    //     }
-    // }
 }
 
 export class Level {
@@ -54,12 +44,15 @@ export class Level {
         this.spritesheets = spritesheets;
         this.tileLayers = null;
         this.player = null;//new PizzaMan(this);
-        this.steams = new Queue();
+        this.steams = [];
+        this.state = new LevelStateLoading(this);
+        this.silencerZones = [];
         this.reset();
     }
 
     reset() {
-        this.steams = new Queue();
+        this.steams = [];
+        this.silencerZones = [];
         this.tileLayers = new Map();
         for (let i = 0; i < this.data.layerInstances.length; i++) {
             const layerInstance = this.data.layerInstances[i];
@@ -71,20 +64,21 @@ export class Level {
                 for (let i = 0; i < entityInstances.length; i++) {
                     const entityInstance = entityInstances[i];
                     if (entityInstance.__identifier === "Player") {
-                        // console.log(" cocu");
-                        this.player = new PizzaMan(this.game);
+                        this.player = new PizzaMan(this.game, this);
                         this.player.gridPos.x = entityInstance.__grid[0];
                         this.player.gridPos.y = entityInstance.__grid[1];
                     }
                     if (entityInstance.__identifier === "Truck") {
-                        // console.log(" cocu");
                         this.truck = this.game.engine.sprite("truck.png");
                         this.truck.scale.x = 3;
                         this.truck.scale.y = 3;
                         this.truck.center.y = 20;
+                        this.trucklight = this.game.engine.sprite("trucklight.png");
+                        this.trucklight.scale.x = 2;
+                        this.trucklight.scale.y = 4;
+                        this.trucklight.alpha = 1.0;
                         this.truck.gridPos = new Vec(entityInstance.__grid[0], entityInstance.__grid[1]);
-                        // this.truck.gridPos.x = entityInstance.__grid[0];
-                        // this.truck.gridPos.y = entityInstance.__grid[1];
+                        this.addSilencerZone(this.truck.gridPos.add(new Vec(2, 0)));
                     }
                 }
             }
@@ -92,21 +86,42 @@ export class Level {
         this.tileLayers.get("Ground").spritesheet = this.spritesheets.ground;
     }
 
+    addSilencerZone(gridPos) {
+        this.silencerZones.push(gridPos);
+    }
+
+    removeSilencerZone(gridPos) {
+        const found = this.silencerZones.find(pos => pos.equals(gridPos));
+        if (found) {
+            const index = this.silencerZones.indexOf(found);
+            if (index >= 0) {
+                this.silencerZones.slice(index, 1);
+            }
+        }
+    }
+
+    isSilencerZone(gridPos) {
+        return this.silencerZones.find(pos => pos.equals(gridPos)) != null;
+    }
+
     update(timeElapsed) {
         const player = this.player;
         if (player) {
-            // player.pos = posToCoord(player.gridPos.x, player.gridPos.y, scale);
-            // console.log(player.pos);
             player.update(timeElapsed);
         }
         const truck = this.truck;
         if (truck) {
             truck.pos = posToCoord(truck.gridPos.x, truck.gridPos.y, C.scale);
         }
+        this.steams.forEach(steam => steam.update(timeElapsed));
+        this.state.update(timeElapsed);
     }
 
     draw() {
-        const context = this.game.engine.context;
+        const engine = this.game.engine;
+        const context = engine.context;
+        const lightsContext = engine.getSurface("lights").context;
+        lightsContext.save();
         context.save();
         const player = this.player;
         if (player) {
@@ -114,14 +129,98 @@ export class Level {
             player.pos.x = Math.trunc(player.pos.x);
             player.pos.y = Math.trunc(player.pos.y);
             context.translate(-player.pos.x, -player.pos.y);
+            lightsContext.translate(-player.pos.x, -player.pos.y);
             this.tileLayers.get("Ground").draw();
             player.draw();
             const truck = this.truck;
             if (truck) {
-                this.game.engine.stamp(truck, truck.pos, 0);
+                engine.stamp(truck, truck.pos, 0);
+                const trucklight = this.trucklight;
+                if (trucklight) {
+                    engine.activateSurface("lights");
+                    engine.stamp(trucklight, truck.pos.add(new Vec(115, -20), 0));
+                    engine.activateSurface("default");
+                }
             }
+            this.steams.forEach(steam => steam.draw());
         }
+        lightsContext.restore();
         context.restore();
+    }
+
+    turn() {
+        this.steamTurn();
+        this.state.turn();
+    }
+
+    steamTurn() {
+        this.steams.forEach(steam => steam.turn());
+    }
+
+    steamDone(steam) {
+        const index = this.steams.indexOf(steam);
+        if (index !== -1) {
+            this.steams.splice(index, 1);
+        }
+    }
+}
+
+class LevelStateLoading {
+    constructor(level) {
+        this.level = level;
+        this.game = level.game;
+    }
+
+    turn() {
+
+    }
+
+    update(timeElapsed) {
+        if (this.level.player && this.level.player.gridPos) {
+            this.level.state = new LevelStateReady(this.level);
+        }
+    }
+}
+
+class LevelStateReady {
+    constructor(level) {
+        this.level = level;
+        this.game = level.game;
+        const steam = new Steam(this.game, level.player.gridPos);
+        steam.ondone = (steam) => level.steamDone(steam);
+        this.level.steams.push(steam);
+    }
+
+    turn() {
+        this.level.state = new TurnStateTurn(this.level);
+    }
+
+    update(timeElapsed) {
+
+    }
+}
+
+class TurnStateTurn {
+    constructor(level) {
+        this.timer = new Timer(C.turnDuration);
+        this.level = level;
+        this.game = level.game;
+        this.turnStart();
+    }
+
+    update(timeElapsed) {
+        this.timer.update(timeElapsed);
+        if (this.timer.isDone()) {
+            this.level.state = new LevelStateReady(this.level);
+        }
+    }
+
+    turnStart() {
+
+    }
+
+    turn() {
+
     }
 }
 

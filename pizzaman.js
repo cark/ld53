@@ -4,9 +4,8 @@ import { Engine } from "./engine";
 import { Game } from "./game.js"
 import { Sprite } from "./sprite.js"
 import { Timer } from "./timer";
-import { Util } from "./util";
 import { Vec } from "./vec.js";
-import { Constants as C } from "./constants.js";
+import { Util, Constants as C } from "./util";
 
 
 const MAX_SPEED = 90.0;
@@ -17,10 +16,10 @@ const bodyScale = new Vec(2.0, 2.0);
 //const scale = new Vec(4, 4);
 
 export class PizzaMan {
-    constructor(game) {
+    constructor(game, level) {
         this.game = game;
         this.pos = new Vec(0.0, 0.0);
-        // const bodyScale = new Vec(1.0, 1.0);
+        this.level = level;
 
         this.bodyScale = bodyScale;
         this.eyesPos = (new Vec(1, -5)).scale(this.bodyScale);
@@ -33,13 +32,23 @@ export class PizzaMan {
         this.eyePosX = 1;
         this.gridPos = new Vec(0, 0);
         this.moveState = new ReadyMoveState(this);
-        this.steam = game.engine.animatedSprite(game.engine.spriteSheet("steam.png", gridParser(8, 8, 24, 8)), 0, 0.5)
-            .addFrame(1)
-            .addFrame(2)
-            .setRepeat(true);
-        this.steam.scale = bodyScale;
-        this.steam.alpha = 0.3;
-        this.steamPos = new Vec(-6, -12);
+        this.glowSprite = game.engine.sprite("CharGlow.png");
+        this.glowSprite.alpha = 0.3;
+        this.glowSprite.scale.x = 2.0;
+        this.glowSprite.scale.y = 2.0;
+        this.silencerDeath = game.engine.animatedSprite(game.engine.spriteSheet("silencerdeath.png", gridParser(32, 32, 256, 32)), 0, 0.2);
+        this.silencerDeath.scale = bodyScale;
+        for (let i = 1; i < 7; i++) {
+            this.silencerDeath.addFrame(i);
+        }
+        this.drawer = new RegularDrawer(this);
+        // this.steam = game.engine.animatedSprite(game.engine.spriteSheet("steam.png", gridParser(8, 8, 24, 8)), 0, 0.5)
+        //     .addFrame(1)
+        //     .addFrame(2)
+        //     .setRepeat(true);
+        // this.steam.scale = bodyScale;
+        // this.steam.alpha = 0.3;
+        // this.steamPos = new Vec(-6, -12);
     }
 
     update(timeElapsed) {
@@ -62,46 +71,39 @@ export class PizzaMan {
             }
         }
         this.eyesPos = (new Vec(this.eyePosX, -5)).scale(this.bodyScale);
-        this.steam.update(timeElapsed);
 
         this.moveState.update(timeElapsed);
 
-        //this.pos = posToCoord(this.gridPos.x, this.gridPos.y, C.scale);
-
-
-        // let speed = new Vec(0.0, 0.0);
-        // const keys = this.game.engine.keysDown;
-        // if (keys.has("ArrowLeft")) {
-        //     speed = speed.add(Vec.LEFT);
-        // }
-        // if (keys.has("ArrowRight")) {
-        //     speed = speed.add(Vec.RIGHT);
-        // }
-        // if (keys.has("ArrowUp")) {
-        //     speed = speed.add(Vec.UP);
-        // }
-        // if (keys.has("ArrowDown")) {
-        //     speed = speed.add(Vec.DOWN);
-        // }
-        // let delta = speed.normalize().mul(timeElapsed * MAX_SPEED);
-        // this.pos = this.pos.add(delta);
-        // if (delta.x > 0) {
-        //     this.direction = lookingRight;
-        //     this.bodyScale.x = Math.abs(this.bodyScale.x);
-        // } else if (delta.x < 0) {
-        //     this.direction = lookingLeft;
-        //     this.bodyScale.x = -Math.abs(this.bodyScale.x);
-        // }
         this.bodySprite.scale = bodyScale;
         this.eyesSprite.scale = bodyScale;
+        this.drawer.update(timeElapsed);
     }
 
     draw() {
-        const engine = this.game.engine;
-        this.actualPos = new Vec(Math.trunc(this.pos.x), Math.trunc(this.pos.y));
-        engine.stamp(this.bodySprite, this.pos, 0);
-        engine.stamp(this.eyesSprite, this.pos.add(this.eyesPos), 0);
-        this.game.engine.stamp(this.steam, this.pos.add(this.steamPos.scale(this.bodyScale)), 0);
+        this.drawer.draw();
+        // const engine = this.game.engine;
+        // engine.stamp(this.bodySprite, this.pos, 0);
+        // engine.stamp(this.eyesSprite, this.pos.add(this.eyesPos), 0);
+        // engine.activateSurface("lights");
+        // engine.stamp(this.glowSprite, this.pos, 0);
+        // engine.activateSurface("default");
+    }
+}
+
+class RegularDrawer {
+    constructor(pizzaman) {
+        this.pizzaman = pizzaman;
+    }
+    update(timeElapsed) {
+
+    }
+    draw() {
+        const engine = this.pizzaman.game.engine;
+        engine.stamp(this.pizzaman.bodySprite, this.pizzaman.pos, 0);
+        engine.stamp(this.pizzaman.eyesSprite, this.pizzaman.pos.add(this.pizzaman.eyesPos), 0);
+        engine.activateSurface("lights");
+        engine.stamp(this.pizzaman.glowSprite, this.pizzaman.pos, 0);
+        engine.activateSurface("default");
     }
 }
 
@@ -110,6 +112,10 @@ class ReadyMoveState {
         this.pizzaman = pizzaman;
     }
     update(timeElapsed) {
+        if (this.pizzaman.level.isSilencerZone(this.pizzaman.gridPos)) {
+            this.pizzaman.moveState = new SilencerDeath(this.pizzaman);
+            return;
+        }
         let self = this;
         this.pizzaman.pos = posToCoord(this.pizzaman.gridPos.x, this.pizzaman.gridPos.y, C.scale);
         const keys = this.pizzaman.game.engine.keysDown;
@@ -130,18 +136,21 @@ class ReadyMoveState {
 
 class MovingState {
     constructor(pizzaman, dest) {
-        this.timer = new Timer(0.5);
+        this.timer = new Timer(C.turnDuration);
         this.pizzaman = pizzaman;
-        this.dest = dest;
+        this.sourcePos = this.pizzaman.gridPos;
+        this.pizzaman.gridPos = dest;
+        // console.log(pizzaman);
+        pizzaman.level.turn();
     }
     update(timeElapsed) {
         this.timer.update(timeElapsed);
         if (this.timer.isDone()) {
-            this.pizzaman.gridPos = this.dest;
+            //this.pizzaman.gridPos = this.dest;
             this.pizzaman.moveState = new ReadyMoveState(this.pizzaman);
         } else {
-            const coord = posToCoord(this.pizzaman.gridPos.x, this.pizzaman.gridPos.y, C.scale)
-                .lerp(this.timer.percentDone(), posToCoord(this.dest.x, this.dest.y, C.scale));
+            const coord = posToCoord(this.sourcePos.x, this.sourcePos.y, C.scale)
+                .lerp(this.timer.percentDone(), posToCoord(this.pizzaman.gridPos.x, this.pizzaman.gridPos.y, C.scale));
             this.pizzaman.pos = coord;
         }
     }
@@ -149,4 +158,31 @@ class MovingState {
 
 function posToCoord(x, y, scale) {
     return (new Vec(x * C.cellSize.x, y * C.cellSize.y)).scale(scale);
+}
+
+class SilencerDeath {
+    constructor(pizzaman) {
+        this.pizzaman = pizzaman;
+        pizzaman.drawer = new SilencerDeathDrawer(pizzaman);
+    }
+    update(timeElapsed) {
+    }
+}
+
+class SilencerDeathDrawer {
+    constructor(pizzaman) {
+        this.pizzaman = pizzaman;
+        this.pizzaman.silencerDeath.reset();
+        this.pizzaman.level.steamTurn();
+    }
+    update(timeElapsed) {
+        this.pizzaman.silencerDeath.update(timeElapsed);
+    }
+    draw() {
+        const engine = this.pizzaman.game.engine;
+        engine.stamp(this.pizzaman.silencerDeath, this.pizzaman.pos, 0);
+        engine.activateSurface("lights");
+        engine.stamp(this.pizzaman.glowSprite, this.pizzaman.pos, 0);
+        engine.activateSurface("default");
+    }
 }

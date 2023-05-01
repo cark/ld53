@@ -49,7 +49,21 @@ class GameStateLevel {
     draw() {
         let level = this.game.levels.levels.get(this.levelName);
         if (level) {
+            const engine = this.game.engine;
+            let lightSurface = engine.activateSurface(engine.ensureSurface("lights", new Vec(1280, 768)).name);
+            engine.clear("#443");
+            let defaultSurface = engine.activateSurface("default");
+
             level.draw();
+
+            lightSurface.context.save();
+            defaultSurface.context.save();
+            lightSurface.context.setTransform();
+            defaultSurface.context.setTransform();
+            defaultSurface.context.globalCompositeOperation = "multiply";
+            defaultSurface.context.drawImage(lightSurface.canvas, 0, 0);
+            defaultSurface.context.restore();
+            lightSurface.context.restore();
         }
     }
 }

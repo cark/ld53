@@ -2,6 +2,7 @@ import { Game } from "./game.js"
 import { Sprite } from "./sprite.js"
 import { AnimatedSprite } from "./animatedsprite.js"
 import { SpriteSheet } from "./spritesheet.js"
+import { Surface } from "./surface.js"
 
 /**
  * The Engine class manages the rendering loop and provides a context to draw on a canvas.
@@ -60,7 +61,44 @@ export class Engine {
          */
         this.game = new gameClass(this);
 
+        this.surfaces = new Map();
+        this.addSurface("default", this.canvas, this.context);
+
         this.animate(this.lastFrameTime);
+    }
+
+    addSurface(name, canvas, context) {
+        const surface = new Surface(name, canvas, context);
+        this.surfaces.set(name, surface);
+        return surface;
+    }
+
+    getSurface(name) {
+        return this.surfaces.get(name);
+    }
+
+    activateSurface(name) {
+        const surface = this.getSurface(name);
+        if (surface) {
+            this.canvas = surface.canvas;
+            this.context = surface.context;
+        }
+        return surface;
+    }
+
+    ensureSurface(name, size) {
+        let surface = this.getSurface(name);
+        if (surface) {
+            return surface;
+        } else {
+            const canvas = document.createElement("canvas");
+            canvas.width = size.x;
+            canvas.height = size.y;
+            const context = canvas.getContext("2d");
+            context.translate(canvas.width / 2, canvas.height / 2);
+            context.imageSmoothingEnabled = false;
+            return this.addSurface(name, canvas, context);
+        }
     }
 
     /**

@@ -1,3 +1,12 @@
+import { Vec } from "./vec.js";
+
+export class Constants {
+    static cellSize = new Vec(16, 16);
+    static scale = new Vec(4, 4);
+    static bodyScale = new Vec(2, 2);
+    static turnDuration = 0.5;
+}
+
 export class Util {
     static remap(value, fromMin, fromMax, toMin, toMax) {
         // Calculate the percentage of the value between the input range
@@ -15,6 +24,10 @@ export class Util {
 
     static lerp(t, start, end) {
         return start + t * (end - start);
+    }
+
+    static posToCoord(x, y, scale) {
+        return (new Vec(x * Constants.cellSize.x, y * Constants.cellSize.y)).scale(scale);
     }
 }
 

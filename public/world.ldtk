@@ -209,9 +209,9 @@
 		{
 			"__cWid": 16,
 			"__cHei": 16,
-			"identifier": "Ground",
+			"identifier": "Ground2",
 			"uid": 3,
-			"relPath": "../public/ground.png",
+			"relPath": "ground.png",
 			"embedAtlas": null,
 			"pxWid": 256,
 			"pxHei": 256,
@@ -299,7 +299,7 @@
 					"entityInstances": [
 						{
 							"__identifier": "Player",
-							"__grid": [3,14],
+							"__grid": [0,14],
 							"__pivot": [0,0],
 							"__tags": [],
 							"__tile": null,
@@ -308,7 +308,7 @@
 							"width": 16,
 							"height": 16,
 							"defUid": 4,
-							"px": [48,224],
+							"px": [0,224],
 							"fieldInstances": []
 						},
 						{
@@ -337,7 +337,7 @@
 					"__pxTotalOffsetX": 0,
 					"__pxTotalOffsetY": 0,
 					"__tilesetDefUid": 3,
-					"__tilesetRelPath": "../public/ground.png",
+					"__tilesetRelPath": "ground.png",
 					"iid": "51241bd0-c640-11ed-9383-5d358e57d5f2",
 					"levelId": 0,
 					"layerDefUid": 1,
