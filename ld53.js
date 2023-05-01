@@ -19,6 +19,7 @@ export class Ld53 extends Game {
         super(engine);
         this.levels = new Levels(this);
         this.state = new GameStateLevel(this, "Level_1");
+        this.currentLevel = null;
         // this.state = new GameStateTitle(this);
     }
 
@@ -40,14 +41,26 @@ class GameStateLevel {
         this.game = game;
         this.levelName = levelName
     }
+
     update(timeElapsed) {
         let level = this.game.levels.levels.get(this.levelName);
         if (level) {
+            if (this.game.currentLevel) {
+                if (this.game.currentLevel !== level) {
+                    this.game.currentLevel.exit();
+                    this.game.currentLevel = level;
+                    level.enter();
+                }
+            } else {
+                this.game.currentLevel = level;
+                level.enter();
+            }
             level.update(timeElapsed);
         }
     }
+
     draw() {
-        let level = this.game.levels.levels.get(this.levelName);
+        let level = this.game.currentLevel;
         if (level) {
             const engine = this.game.engine;
             let lightSurface = engine.activateSurface(engine.ensureSurface("lights", new Vec(1280, 768)).name);

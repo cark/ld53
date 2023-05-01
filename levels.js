@@ -7,6 +7,7 @@ import { Constants as C } from "./util.js";
 import { Queue } from "./queue";
 import { Steam } from "./steam";
 import { Timer } from "./timer";
+import { Floodlights } from "./floodlights";
 
 // const scale = new Vec(4, 4);
 // const cellSize = new Vec(16, 16);
@@ -47,7 +48,22 @@ export class Level {
         this.steams = [];
         this.state = new LevelStateLoading(this);
         this.silencerZones = [];
+        this.floodlights = new Floodlights(this);
         this.reset();
+        const self = this;
+        this.onkeypress = event => {
+            if (event.code === "KeyR") {
+                self.reset();
+            }
+        };
+    }
+
+    enter() {
+        document.addEventListener("keypress", this.onkeypress);
+    }
+
+    exit() {
+        document.removeEventListener("keypress", this.onkeypress);
     }
 
     reset() {
@@ -80,9 +96,14 @@ export class Level {
                         this.truck.gridPos = new Vec(entityInstance.__grid[0], entityInstance.__grid[1]);
                         this.addSilencerZone(this.truck.gridPos.add(new Vec(2, 0)));
                     }
+                    if (entityInstance.__identifier === "Floodlight") {
+                        this.floodlights.addFromLdtk(entityInstance);
+                    }
                 }
             }
         }
+        this.floodlights.init();
+        console.log(this.floodlights);
         this.tileLayers.get("Ground").spritesheet = this.spritesheets.ground;
     }
 
@@ -114,6 +135,7 @@ export class Level {
             truck.pos = posToCoord(truck.gridPos.x, truck.gridPos.y, C.scale);
         }
         this.steams.forEach(steam => steam.update(timeElapsed));
+        if (!this.player.dying) this.floodlights.update(timeElapsed);
         this.state.update(timeElapsed);
     }
 
@@ -143,6 +165,7 @@ export class Level {
                 }
             }
             this.steams.forEach(steam => steam.draw());
+            this.floodlights.draw();
         }
         lightsContext.restore();
         context.restore();
@@ -150,6 +173,7 @@ export class Level {
 
     turn() {
         this.steamTurn();
+        this.floodlights.turn();
         this.state.turn();
     }
 
@@ -162,6 +186,10 @@ export class Level {
         if (index !== -1) {
             this.steams.splice(index, 1);
         }
+    }
+
+    isInFloodLight(pos) {
+        return this.floodlights.isInFloodLight(pos);
     }
 }
 

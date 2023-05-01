@@ -20,6 +20,7 @@ export class PizzaMan {
         this.game = game;
         this.pos = new Vec(0.0, 0.0);
         this.level = level;
+        this.dying = false;
 
         this.bodyScale = bodyScale;
         this.eyesPos = (new Vec(1, -5)).scale(this.bodyScale);
@@ -116,6 +117,7 @@ class ReadyMoveState {
             this.pizzaman.moveState = new SilencerDeath(this.pizzaman);
             return;
         }
+
         let self = this;
         this.pizzaman.pos = posToCoord(this.pizzaman.gridPos.x, this.pizzaman.gridPos.y, C.scale);
         const keys = this.pizzaman.game.engine.keysDown;
@@ -144,6 +146,11 @@ class MovingState {
         pizzaman.level.turn();
     }
     update(timeElapsed) {
+        if (this.pizzaman.level.isInFloodLight(this.pizzaman.pos)) {
+            console.log("bleh!");
+            this.pizzaman.moveState = new SilencerDeath(this.pizzaman);
+            return;
+        }
         this.timer.update(timeElapsed);
         if (this.timer.isDone()) {
             //this.pizzaman.gridPos = this.dest;
@@ -163,6 +170,7 @@ function posToCoord(x, y, scale) {
 class SilencerDeath {
     constructor(pizzaman) {
         this.pizzaman = pizzaman;
+        pizzaman.dying = true;
         pizzaman.drawer = new SilencerDeathDrawer(pizzaman);
     }
     update(timeElapsed) {

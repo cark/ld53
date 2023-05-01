@@ -34,6 +34,10 @@ export class Vec {
         return new Vec(this.x * number, this.y * number);
     }
 
+    sub(other) {
+        return new Vec(this.x - other.x, this.y - other.y);
+    }
+
     /**
      * Returns the length of this vector.
      * @returns {number} The length of this vector.
