@@ -3,14 +3,13 @@ import { Game } from "./game.js";
 import { Engine } from "./engine.js";
 import { Vec } from "./vec.js";
 import { PizzaMan } from "./pizzaman.js";
-import { Constants as C } from "./util.js";
+import { Util, Constants as C } from "./util.js";
 import { Queue } from "./queue";
 import { Steam } from "./steam";
 import { Timer } from "./timer";
 import { Floodlights } from "./floodlights";
-
-// const scale = new Vec(4, 4);
-// const cellSize = new Vec(16, 16);
+import { Walls } from "./walls";
+import { Goal } from "./goal";
 
 export class Levels {
     constructor(game) {
@@ -18,13 +17,14 @@ export class Levels {
         this.game = game;
         this.levels = new Map();
         this.ground = game.engine.spriteSheet("ground.png", gridParser(C.cellSize.x, C.cellSize.y, 256, 256));
+        this.walls = game.engine.spriteSheet("walls.png", gridParser(C.cellSize.x, C.cellSize.y, 256, 256));
         fetch("world.ldtk")
             .then(response => response.json())
             .then(data => {
                 this.data = data;
                 let levels = data.levels;
                 for (let i = 0; i < levels.length; i++) {
-                    const level = new Level(game, levels[i], { ground: this.ground });
+                    const level = new Level(game, levels[i], { ground: this.ground, walls: this.walls });
                     this.levels.set(level.name, level);
                 }
                 console.log(data);
@@ -49,6 +49,9 @@ export class Level {
         this.state = new LevelStateLoading(this);
         this.silencerZones = [];
         this.floodlights = new Floodlights(this);
+        this.walls = new Walls(this);
+        this.help = null;
+        this.goal = null;
         this.reset();
         const self = this;
         this.onkeypress = event => {
@@ -70,11 +73,14 @@ export class Level {
         this.steams = [];
         this.silencerZones = [];
         this.tileLayers = new Map();
+        this.floodlights = new Floodlights(this);
+        this.walls = new Walls(this);
         for (let i = 0; i < this.data.layerInstances.length; i++) {
             const layerInstance = this.data.layerInstances[i];
             if (layerInstance.__type === "Tiles") {
                 const layer = new Tiles(this.game, layerInstance);
                 this.tileLayers.set(layer.name, layer);
+                //} else if (layerInstance.__identifier === "Walls") {
             } else if (layerInstance.__type === "Entities") {
                 const entityInstances = layerInstance.entityInstances;
                 for (let i = 0; i < entityInstances.length; i++) {
@@ -99,12 +105,21 @@ export class Level {
                     if (entityInstance.__identifier === "Floodlight") {
                         this.floodlights.addFromLdtk(entityInstance);
                     }
+                    if (entityInstance.__identifier === "HelpText") {
+                        this.help = this.game.engine.sprite("help.png");
+                        this.help.scale = new Vec(3, 3);
+                        this.help.pos = Util.posToCoord(entityInstance.__grid[0], entityInstance.__grid[1], C.scale);
+                    }
+                    if (entityInstance.__identifier === "Goal") {
+                        this.goal = new Goal(this, new Vec(entityInstance.__grid[0], entityInstance.__grid[1]));
+                    }
                 }
             }
         }
         this.floodlights.init();
-        console.log(this.floodlights);
         this.tileLayers.get("Ground").spritesheet = this.spritesheets.ground;
+        this.tileLayers.get("Walls").spritesheet = this.spritesheets.walls;
+        this.walls.init(this.tileLayers.get("Walls"));
     }
 
     addSilencerZone(gridPos) {
@@ -136,6 +151,9 @@ export class Level {
         }
         this.steams.forEach(steam => steam.update(timeElapsed));
         if (!this.player.dying) this.floodlights.update(timeElapsed);
+        if (this.goal) {
+            this.goal.update(timeElapsed);
+        }
         this.state.update(timeElapsed);
     }
 
@@ -153,7 +171,11 @@ export class Level {
             context.translate(-player.pos.x, -player.pos.y);
             lightsContext.translate(-player.pos.x, -player.pos.y);
             this.tileLayers.get("Ground").draw();
+            this.tileLayers.get("Walls").draw();
             player.draw();
+            if (this.goal) {
+                this.goal.draw();
+            }
             const truck = this.truck;
             if (truck) {
                 engine.stamp(truck, truck.pos, 0);
@@ -166,6 +188,9 @@ export class Level {
             }
             this.steams.forEach(steam => steam.draw());
             this.floodlights.draw();
+            if (this.help) {
+                engine.stamp(this.help, this.help.pos);
+            }
         }
         lightsContext.restore();
         context.restore();
@@ -175,6 +200,10 @@ export class Level {
         this.steamTurn();
         this.floodlights.turn();
         this.state.turn();
+    }
+
+    isPlayerAtGoal() {
+        return this.player.gridPos.equals(this.goal.gridPos.add(Vec.DOWN));
     }
 
     steamTurn() {
@@ -190,6 +219,10 @@ export class Level {
 
     isInFloodLight(pos) {
         return this.floodlights.isInFloodLight(pos);
+    }
+
+    isPassable(pos) {
+        return this.walls.isPassable(pos);
     }
 }
 
@@ -224,7 +257,10 @@ class LevelStateReady {
     }
 
     update(timeElapsed) {
-
+        if (this.level.isPlayerAtGoal()) {
+            this.level.player.disapear();
+            this.level.goal.open();
+        }
     }
 }
 
@@ -262,27 +298,24 @@ export class Tiles {
         this.name = data['__identifier'];
         this.width = data['__cWid'];
         this.height = data['__cHei'];
-        this.tiles = data.gridTiles.map(tileDef => tileDef.t);
+        this.tiles = data.gridTiles.map(tileDef => {
+            const d = tileDef.d[0];
+            const x = d % this.width;
+            const y = Math.floor(d / this.width);
+            return { id: tileDef.t, pos: new Vec(x, y) };
+        });
         // console.log(this.tiles);
         this.spritesheet = null;
         // console.log(this.name);
     }
 
     draw() {
-        for (let y = 0; y < this.height; y++) {
-            for (let x = 0; x < this.width; x++) {
-                const index = x + y * this.width;
-                const sprite = this.spritesheet.sprites.get(this.tiles[index]);
-                const coord = posToCoord(x, y, C.scale);
-                //console.log(coord);
-                sprite.scale = C.scale;
-                // const pos = (new Vec(x * sprite.imageRect.width, y * sprite.imageRect.height)).scale(scale);
-                //console.log(pos);
-                //console.log(coord);
-                // coord.x = Math.trunc(coord.x);
-                // coord.y = Math.trunc(coord.y);
-                this.game.engine.stamp(sprite, coord);
-            }
-        }
+        const engine = this.game.engine;
+        this.tiles.forEach(tile => {
+            const sprite = this.spritesheet.sprites.get(tile.id);
+            const coord = posToCoord(tile.pos.x, tile.pos.y, C.scale);
+            sprite.scale = C.scale;
+            engine.stamp(sprite, coord);
+        });
     }
 }

@@ -3,6 +3,7 @@ import { Sprite } from "./sprite.js"
 import { AnimatedSprite } from "./animatedsprite.js"
 import { SpriteSheet } from "./spritesheet.js"
 import { Surface } from "./surface.js"
+import { Sounds } from "./sounds.js"
 
 /**
  * The Engine class manages the rendering loop and provides a context to draw on a canvas.
@@ -54,6 +55,8 @@ export class Engine {
         document.addEventListener("keyup", ev => {
             this.keysDown.delete(event.code);
         });
+
+        this.audio = new Sounds();
 
         /**
          * The game instance.

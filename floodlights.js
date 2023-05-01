@@ -96,7 +96,6 @@ export class FLoodlight {
 
     isInLight(pos) {
         let result = this.pos.sub(pos).length() < 5;
-        console.log(result);
         return result;
     }
 }

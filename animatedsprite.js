@@ -19,9 +19,9 @@ export class AnimatedSprite {
         this.alpha = 1.0;
     }
 
-    addFrame(id, duration) {
+    addFrame(id, duration, sound) {
         if (name == null) throw new Error("Missing name parameter");
-        this.frames.push(new AnimationFrame(id, duration))
+        this.frames.push(new AnimationFrame(id, duration, sound))
         return this;
     }
 
@@ -42,19 +42,30 @@ export class AnimatedSprite {
         this.currIndex = 0;
     }
 
+    setCurrIndex(value) {
+        if (this.currIndex !== value) {
+            this.currIndex = value;
+            const frame = this.frames[this.currIndex];
+            if (frame.sound) {
+                console.log("shouldplay");
+                frame.sound.play();
+            }
+        }
+    }
+
     update(timeElapsed) {
         this.timer.update(timeElapsed);
         while (this.timer.isDone()) {
             let index = this.currIndex + 1;
             if (index >= this.frames.length) {
                 if (this.repeat) {
-                    this.currIndex = 0;
+                    this.setCurrIndex(0);
                 } else {
-                    this.currIndex = this.frames.length - 1;
+                    this.setCurrIndex(this.frames.length - 1);
                     break;
                 }
             } else {
-                this.currIndex = index;
+                this.setCurrIndex(index);
             }
             this.timer.reset(this.indexDuration(this.currIndex), this.timer.excessTime());
         }
@@ -79,9 +90,10 @@ export class AnimatedSprite {
 }
 
 export class AnimationFrame {
-    constructor(id, duration) {
+    constructor(id, duration, sound) {
         this.name = id;
         this.duration = duration;
         this.sprite = null;
+        this.sound = sound;
     }
 }

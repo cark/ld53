@@ -11,7 +11,7 @@ import { Util, Constants as C } from "./util";
 const MAX_SPEED = 90.0;
 const lookingLeft = {};
 const lookingRight = {};
-const bodyScale = new Vec(2.0, 2.0);
+const bodyScale = new Vec(2.5, 2.5);
 //const cellSize = new Vec(16, 16);
 //const scale = new Vec(4, 4);
 
@@ -39,17 +39,21 @@ export class PizzaMan {
         this.glowSprite.scale.y = 2.0;
         this.silencerDeath = game.engine.animatedSprite(game.engine.spriteSheet("silencerdeath.png", gridParser(32, 32, 256, 32)), 0, 0.2);
         this.silencerDeath.scale = bodyScale;
+        this.disapearSprite = game.engine.animatedSprite(game.engine.spriteSheet("disapear.png", gridParser(32, 32, 192, 32)), 0, 1.5)
+            .addFrame(1, 0.5)
+            .addFrame(2, 0.3)
+            .addFrame(3, 0.3)
+            .addFrame(4, 0.3)
+            .addFrame(5, 0.3);
+        this.disapearSprite.scale = bodyScale;
+        this.silencerSound = game.engine.audio.getSound("silenced-gun-shot.mp3");
+        this.silencerSound.setVolume(0.2);
+        this.walkingSound = game.engine.audio.getSound("walking-in-grass.mp3");
+        this.walkingSound.setVolume(0.2);
         for (let i = 1; i < 7; i++) {
             this.silencerDeath.addFrame(i);
         }
         this.drawer = new RegularDrawer(this);
-        // this.steam = game.engine.animatedSprite(game.engine.spriteSheet("steam.png", gridParser(8, 8, 24, 8)), 0, 0.5)
-        //     .addFrame(1)
-        //     .addFrame(2)
-        //     .setRepeat(true);
-        // this.steam.scale = bodyScale;
-        // this.steam.alpha = 0.3;
-        // this.steamPos = new Vec(-6, -12);
     }
 
     update(timeElapsed) {
@@ -82,12 +86,12 @@ export class PizzaMan {
 
     draw() {
         this.drawer.draw();
-        // const engine = this.game.engine;
-        // engine.stamp(this.bodySprite, this.pos, 0);
-        // engine.stamp(this.eyesSprite, this.pos.add(this.eyesPos), 0);
-        // engine.activateSurface("lights");
-        // engine.stamp(this.glowSprite, this.pos, 0);
-        // engine.activateSurface("default");
+    }
+
+    disapear() {
+        if (!(this.moveState instanceof Disapear)) {
+            this.moveState = new Disapear(this);
+        }
     }
 }
 
@@ -122,7 +126,10 @@ class ReadyMoveState {
         this.pizzaman.pos = posToCoord(this.pizzaman.gridPos.x, this.pizzaman.gridPos.y, C.scale);
         const keys = this.pizzaman.game.engine.keysDown;
         function move(dir) {
-            self.pizzaman.moveState = new MovingState(self.pizzaman, self.pizzaman.gridPos.add(dir));
+            const dest = self.pizzaman.gridPos.add(dir);
+            if (self.pizzaman.level.isPassable(dest)) {
+                self.pizzaman.moveState = new MovingState(self.pizzaman, dest);
+            }
         }
         if (keys.has("ArrowLeft")) {
             move(Vec.LEFT);
@@ -132,6 +139,8 @@ class ReadyMoveState {
             move(Vec.UP);
         } else if (keys.has("ArrowDown")) {
             move(Vec.DOWN);
+        } else if (keys.has("Space")) {
+            self.pizzaman.moveState = new MovingState(self.pizzaman, self.pizzaman.gridPos);
         }
     }
 }
@@ -142,12 +151,11 @@ class MovingState {
         this.pizzaman = pizzaman;
         this.sourcePos = this.pizzaman.gridPos;
         this.pizzaman.gridPos = dest;
-        // console.log(pizzaman);
+        pizzaman.walkingSound.play();
         pizzaman.level.turn();
     }
     update(timeElapsed) {
         if (this.pizzaman.level.isInFloodLight(this.pizzaman.pos)) {
-            console.log("bleh!");
             this.pizzaman.moveState = new SilencerDeath(this.pizzaman);
             return;
         }
@@ -172,6 +180,8 @@ class SilencerDeath {
         this.pizzaman = pizzaman;
         pizzaman.dying = true;
         pizzaman.drawer = new SilencerDeathDrawer(pizzaman);
+        //console.log("coucou");
+        pizzaman.silencerSound.play();
     }
     update(timeElapsed) {
     }
@@ -192,5 +202,38 @@ class SilencerDeathDrawer {
         engine.activateSurface("lights");
         engine.stamp(this.pizzaman.glowSprite, this.pizzaman.pos, 0);
         engine.activateSurface("default");
+    }
+}
+
+class Disapear {
+    constructor(pizzaman) {
+        this.pizzaman = pizzaman;
+        this.level = pizzaman.level;
+        pizzaman.drawer = new DisapearDrawer(this.pizzaman);
+    }
+    update(timeElapsed) {
+    }
+}
+
+class DisapearDrawer {
+    constructor(pizzaman) {
+        this.pizzaman = pizzaman;
+        this.pizzaman.disapearSprite.reset();
+    }
+    update(timeElapsed) {
+        this.pizzaman.disapearSprite.update(timeElapsed);
+    }
+    draw() {
+        const engine = this.pizzaman.game.engine;
+        if (!this.pizzaman.disapearSprite.isDone()) {
+            engine.stamp(this.pizzaman.disapearSprite, this.pizzaman.pos, 0);
+            if (this.pizzaman.disapearSprite.currIndex <= 1) {
+                engine.activateSurface("lights");
+                engine.stamp(this.pizzaman.glowSprite, this.pizzaman.pos, 0);
+                engine.activateSurface("default");
+            } else {
+                this.pizzaman.disapearSprite.alpha = 0.3;
+            }
+        }
     }
 }

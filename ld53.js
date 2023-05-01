@@ -10,6 +10,8 @@ import { Levels } from "./levels.js"
  * Represents the Ld53 game.
  * @extends Game
  */
+
+const levels = ["Level_0", "Level_1"];
 export class Ld53 extends Game {
     /**
      * Constructs a new Game instance.
@@ -18,8 +20,13 @@ export class Ld53 extends Game {
     constructor(engine) {
         super(engine);
         this.levels = new Levels(this);
-        this.state = new GameStateLevel(this, "Level_1");
+        this.levelIndex = 0;
+        this.state = new GameStateLevel(this, levels[this.levelIndex]);
         this.currentLevel = null;
+        this.music = engine.audio.getSound("music.mp3");
+        this.music.setVolume(0.05);
+        this.music.setLoop(true);
+        this.music.play();
         // this.state = new GameStateTitle(this);
     }
 
@@ -93,7 +100,6 @@ class GameStateTitle {
     registerEvents() {
         const self = this;
         function handleEvent() {
-            console.log("event");
             self.game.state = new GameStateLevel(self.game, "Level_1");
             document.removeEventListener("keypress", handleEvent);
             self.game.engine.canvas.removeEventListener("click", handleEvent);
