@@ -147,11 +147,13 @@ class ReadyMoveState {
 
 class MovingState {
     constructor(pizzaman, dest) {
+        if (!dest.equals(pizzaman.gridPos)) {
+            pizzaman.walkingSound.play();
+        }
         this.timer = new Timer(C.turnDuration);
         this.pizzaman = pizzaman;
         this.sourcePos = this.pizzaman.gridPos;
         this.pizzaman.gridPos = dest;
-        pizzaman.walkingSound.play();
         pizzaman.level.turn();
     }
     update(timeElapsed) {
