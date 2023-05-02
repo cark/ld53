@@ -193,4 +193,34 @@ export class Engine {
         if (!(sprite instanceof Sprite || sprite instanceof AnimatedSprite)) throw new Error("sprite must be a Sprite or an AnimatedSprite.");
         sprite.stamp(this.context, pos, angle);
     }
+
+    text(text, maxWidth, x, y, lineHeight) {
+        this.context.save();
+        this.context.font = "16px Arial";
+        this.context.fillStyle = "#FFD";
+        drawMultilineText(this.context, text, maxWidth, x, y, lineHeight);
+        this.context.restore();
+    }
+}
+
+function drawMultilineText(context, text, maxWidth, x, y, lineHeight) {
+    var words = text.split(' ');
+    var line = '';
+
+    for (var i = 0; i < words.length; i++) {
+        var testLine = line + words[i] + ' ';
+        var metrics = context.measureText(testLine);
+        var testWidth = metrics.width;
+
+        if (testWidth > maxWidth && i > 0) {
+            context.fillText(line, x, y);
+            line = words[i] + ' ';
+            y += lineHeight;
+        }
+        else {
+            line = testLine;
+        }
+    }
+
+    context.fillText(line, x, y);
 }

@@ -10,6 +10,7 @@ export class Goal {
         this.headshot = engine.audio.getSound("headshot.mp3");
         this.headshot.setVolume(0.1);
         this.sprite = engine.spriteSheet("goal.png", gridParser(16, 16, 32, 16));
+        const self = this;
         this.capo = engine.animatedSprite(engine.spriteSheet("capo.png", gridParser(32, 32, 512, 32)), 0, 1.5)
             .addFrame(1, 1)
             .addFrame(2, 0.3)
@@ -25,11 +26,12 @@ export class Goal {
             .addFrame(9, 0.3)
             .addFrame(8, 0.5)
             .addFrame(10, 0.5)
-            .addFrame(11, 0.3, this.headshot)
+            .addFrame(11, 0.3, () => self.headshot.play())
             .addFrame(12, 0.3)
             .addFrame(13, 0.8)
             .addFrame(14, 0.15)
-            .addFrame(15, 0.3);
+            .addFrame(15, 2)
+            .addFrame(15, 1.0, () => self.level.game.wonLevel());
         this.light = engine.sprite("goallight.png");
         this.light.scale = Constants.bodyScale;
         this.light.pos = Util.posToCoord(gridPos.x, gridPos.y, Constants.scale);;

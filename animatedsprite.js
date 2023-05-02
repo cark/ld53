@@ -19,9 +19,9 @@ export class AnimatedSprite {
         this.alpha = 1.0;
     }
 
-    addFrame(id, duration, sound) {
+    addFrame(id, duration, action) {
         if (name == null) throw new Error("Missing name parameter");
-        this.frames.push(new AnimationFrame(id, duration, sound))
+        this.frames.push(new AnimationFrame(id, duration, action))
         return this;
     }
 
@@ -46,9 +46,8 @@ export class AnimatedSprite {
         if (this.currIndex !== value) {
             this.currIndex = value;
             const frame = this.frames[this.currIndex];
-            if (frame.sound) {
-                console.log("shouldplay");
-                frame.sound.play();
+            if (frame.action) {
+                frame.action(this);
             }
         }
     }
@@ -90,10 +89,10 @@ export class AnimatedSprite {
 }
 
 export class AnimationFrame {
-    constructor(id, duration, sound) {
+    constructor(id, duration, action) {
         this.name = id;
         this.duration = duration;
         this.sprite = null;
-        this.sound = sound;
+        this.action = action;
     }
 }

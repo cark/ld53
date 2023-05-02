@@ -51,8 +51,11 @@ export class Level {
         this.floodlights = new Floodlights(this);
         this.walls = new Walls(this);
         this.help = null;
+        this.gg = null;
         this.goal = null;
+        this.blurb = "";
         this.reset();
+        this.drawer = null;
         const self = this;
         this.onkeypress = event => {
             if (event.code === "KeyR") {
@@ -75,6 +78,14 @@ export class Level {
         this.tileLayers = new Map();
         this.floodlights = new Floodlights(this);
         this.walls = new Walls(this);
+        //const fields = new Map();
+        const self = this;
+        this.data.fieldInstances.forEach(fi => {
+            if (fi.__identifier === "Blurb") {
+                self.blurb = fi.__value;
+            }
+        });
+        //console.log(this.blurb);
         for (let i = 0; i < this.data.layerInstances.length; i++) {
             const layerInstance = this.data.layerInstances[i];
             if (layerInstance.__type === "Tiles") {
@@ -100,6 +111,7 @@ export class Level {
                         this.trucklight.scale.y = 4;
                         this.trucklight.alpha = 1.0;
                         this.truck.gridPos = new Vec(entityInstance.__grid[0], entityInstance.__grid[1]);
+                        this.truck.pos = posToCoord(this.truck.gridPos.x, this.truck.gridPos.y, C.scale);
                         this.addSilencerZone(this.truck.gridPos.add(new Vec(2, 0)));
                     }
                     if (entityInstance.__identifier === "Floodlight") {
@@ -108,6 +120,11 @@ export class Level {
                     if (entityInstance.__identifier === "HelpText") {
                         this.help = this.game.engine.sprite("help.png");
                         this.help.scale = new Vec(3, 3);
+                        this.help.pos = Util.posToCoord(entityInstance.__grid[0], entityInstance.__grid[1], C.scale);
+                    }
+                    if (entityInstance.__identifier === "GG") {
+                        this.help = this.game.engine.sprite("gg.png");
+                        this.help.scale = new Vec(8, 4);
                         this.help.pos = Util.posToCoord(entityInstance.__grid[0], entityInstance.__grid[1], C.scale);
                     }
                     if (entityInstance.__identifier === "Goal") {
@@ -145,10 +162,10 @@ export class Level {
         if (player) {
             player.update(timeElapsed);
         }
-        const truck = this.truck;
-        if (truck) {
-            truck.pos = posToCoord(truck.gridPos.x, truck.gridPos.y, C.scale);
-        }
+        // const truck = this.truck;
+        // if (truck) {
+        //     truck.pos = posToCoord(truck.gridPos.x, truck.gridPos.y, C.scale);
+        // }
         this.steams.forEach(steam => steam.update(timeElapsed));
         if (!this.player.dying) this.floodlights.update(timeElapsed);
         if (this.goal) {
@@ -158,6 +175,9 @@ export class Level {
     }
 
     draw() {
+        // if (this.drawer) {
+        //     this.drawer.draw();
+        // }
         const engine = this.game.engine;
         const context = engine.context;
         const lightsContext = engine.getSurface("lights").context;
@@ -203,7 +223,7 @@ export class Level {
     }
 
     isPlayerAtGoal() {
-        return this.player.gridPos.equals(this.goal.gridPos.add(Vec.DOWN));
+        return this.goal && this.player.gridPos.equals(this.goal.gridPos.add(Vec.DOWN));
     }
 
     steamTurn() {
@@ -222,9 +242,55 @@ export class Level {
     }
 
     isPassable(pos) {
-        return this.walls.isPassable(pos);
+        let goalBlock = this.goal && this.goal.gridPos.equals(pos);
+        return this.walls.isPassable(pos) && !goalBlock;
     }
 }
+
+// class LevelDrawer {
+//     constructor(level) {
+//         this.level = level;
+//     }
+//     draw() {
+//         const engine = this.level.game.engine;
+//         const context = engine.context;
+//         const lightsContext = engine.getSurface("lights").context;
+//         lightsContext.save();
+//         context.save();
+//         const player = this.level.player;
+//         if (player) {
+//             // let coord = [Math.trunc(-player.pos.x), Math.trunc(-player.pos.y)]
+//             player.pos.x = Math.trunc(player.pos.x);
+//             player.pos.y = Math.trunc(player.pos.y);
+//             context.translate(-player.pos.x, -player.pos.y);
+//             lightsContext.translate(-player.pos.x, -player.pos.y);
+//             this.level.tileLayers.get("Ground").draw();
+//             this.level.tileLayers.get("Walls").draw();
+//             player.draw();
+//             if (this.level.goal) {
+//                 this.level.goal.draw();
+//             }
+//             const truck = this.level.truck;
+//             if (truck) {
+//                 engine.stamp(truck, truck.pos, 0);
+//                 const trucklight = this.level.trucklight;
+//                 if (trucklight) {
+//                     engine.activateSurface("lights");
+//                     engine.stamp(trucklight, truck.pos.add(new Vec(115, -20), 0));
+//                     engine.activateSurface("default");
+//                 }
+//             }
+//             this.level.steams.forEach(steam => steam.draw());
+//             this.level.floodlights.draw();
+//             if (this.level.help) {
+//                 engine.stamp(this.level.help, this.level.help.pos);
+//             }
+//         }
+//         lightsContext.restore();
+//         context.restore();
+
+//     }
+// }
 
 class LevelStateLoading {
     constructor(level) {
@@ -239,6 +305,7 @@ class LevelStateLoading {
     update(timeElapsed) {
         if (this.level.player && this.level.player.gridPos) {
             this.level.state = new LevelStateReady(this.level);
+            // this.level.state = new LevelStateBlurb(this.level);
         }
     }
 }
@@ -250,6 +317,7 @@ class LevelStateReady {
         const steam = new Steam(this.game, level.player.gridPos);
         steam.ondone = (steam) => level.steamDone(steam);
         this.level.steams.push(steam);
+        //this.level.drawer = new LevelDrawer(level);
     }
 
     turn() {
@@ -319,3 +387,20 @@ export class Tiles {
         });
     }
 }
+
+// class LevelStateBlurb {
+//     constructor(level) {
+//         this.level = level;
+//     }
+
+//     update(timeElapsed) {
+//         const keys = this.level.game.engine.keysDown;
+//         if (keys.has("Enter")) {
+//             this.level.state = new LevelStateReady(this.level);
+//         }
+//     }
+
+//     draw() {
+
+//     }
+// }

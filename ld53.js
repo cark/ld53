@@ -11,7 +11,7 @@ import { Levels } from "./levels.js"
  * @extends Game
  */
 
-const levels = ["Level_0", "Level_1"];
+const levels = ["Level_0", "Level_1", "GG"];
 export class Ld53 extends Game {
     /**
      * Constructs a new Game instance.
@@ -21,13 +21,14 @@ export class Ld53 extends Game {
         super(engine);
         this.levels = new Levels(this);
         this.levelIndex = 0;
-        this.state = new GameStateLevel(this, levels[this.levelIndex]);
+        // this.state = new GameStateLevel(this, levels[this.levelIndex]);
+        // this.state = new GameStateBlurb(this, levels[this.levelIndex]);
         this.currentLevel = null;
         this.music = engine.audio.getSound("music.mp3");
         this.music.setVolume(0.05);
         this.music.setLoop(true);
         this.music.play();
-        // this.state = new GameStateTitle(this);
+        this.state = new GameStateTitle(this);
     }
 
     /**
@@ -41,6 +42,27 @@ export class Ld53 extends Game {
         this.state.update(timeElapsed);
         this.state.draw();
     }
+
+    wonLevel() {
+        if (this.levelIndex < levels.length - 1) {
+            this.levelIndex = this.levelIndex + 1;
+        }
+        this.state = new GameStateBlurb(this, levels[this.levelIndex]);
+    }
+
+    nextLevel() {
+        if (this.levelIndex < levels.length - 1) {
+            this.levelIndex = this.levelIndex + 1;
+            this.state = new GameStateBlurb(this, levels[this.levelIndex]);
+        }
+    }
+
+    previousLevel() {
+        if (this.levelIndex > 0) {
+            this.levelIndex = this.levelIndex - 1;
+            this.state = new GameStateBlurb(this, levels[this.levelIndex]);
+        }
+    }
 }
 
 class GameStateLevel {
@@ -52,16 +74,6 @@ class GameStateLevel {
     update(timeElapsed) {
         let level = this.game.levels.levels.get(this.levelName);
         if (level) {
-            if (this.game.currentLevel) {
-                if (this.game.currentLevel !== level) {
-                    this.game.currentLevel.exit();
-                    this.game.currentLevel = level;
-                    level.enter();
-                }
-            } else {
-                this.game.currentLevel = level;
-                level.enter();
-            }
             level.update(timeElapsed);
         }
     }
@@ -88,6 +100,51 @@ class GameStateLevel {
     }
 }
 
+class GameStateBlurb {
+    constructor(game, levelName) {
+        this.game = game;
+        this.levelName = levelName;
+        this.levelState = new GameStateLevel(game, levelName);
+        this.registerEvents();
+    }
+
+    registerEvents() {
+        const self = this;
+        function handleEvent() {
+            self.game.state = self.levelState;
+            //self.game.state = new GameStateBlurb(self.game, levels[self.game.levelIndex]);
+            //self.game.state = new GameStateLevel(self.game, "Level_1");
+            document.removeEventListener("keypress", handleEvent);
+            self.game.engine.canvas.removeEventListener("click", handleEvent);
+        }
+        document.addEventListener("keypress", handleEvent);
+        this.game.engine.canvas.addEventListener("click", handleEvent);
+    }
+
+    update(timeElapsed) {
+        let level = this.game.levels.levels.get(this.levelName);
+        if (level) {
+            if (this.game.currentLevel) {
+                if (this.game.currentLevel !== level) {
+                    this.game.currentLevel.exit();
+                    this.game.currentLevel = level;
+                    level.enter();
+                }
+            } else {
+                this.game.currentLevel = level;
+                level.enter();
+            }
+        }
+    }
+
+    draw() {
+        let level = this.game.levels.levels.get(this.levelName);
+        if (level && level.blurb) {
+            this.game.engine.text(level.blurb, 500, -200, -100, 30)
+        }
+    }
+}
+
 class GameStateTitle {
     constructor(game) {
         this.game = game;
@@ -100,7 +157,8 @@ class GameStateTitle {
     registerEvents() {
         const self = this;
         function handleEvent() {
-            self.game.state = new GameStateLevel(self.game, "Level_1");
+            self.game.state = new GameStateBlurb(self.game, levels[self.game.levelIndex]);
+            //self.game.state = new GameStateLevel(self.game, "Level_1");
             document.removeEventListener("keypress", handleEvent);
             self.game.engine.canvas.removeEventListener("click", handleEvent);
         }

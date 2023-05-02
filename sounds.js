@@ -47,6 +47,10 @@ export class Sound {
         }
     }
 
+    stop(value) {
+        this.audio.stop();
+    }
+
     // spawnPlay() {
     //     const audio = new Audio(this.url);
     //     audio.play();
